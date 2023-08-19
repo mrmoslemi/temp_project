@@ -1,19 +1,10 @@
+from typing import Iterable, Optional
 from django.db import models
 from django.utils import timezone
 import uuid
 
 
-class PhraseField(models.JSONField):
-    # TODO
-    pass
-
-
-class MultiSizeImageField(models.ImageField):
-    # TODO
-    pass
-
-
-class BaseModel(models.Model):
+class UUIDModel(models.Model):
     class Meta:
         abstract = True
 
@@ -22,60 +13,50 @@ class BaseModel(models.Model):
     )
 
 
-class CreatableModel(BaseModel):
+class CreatableModel(models.Model):
     class Meta:
         abstract = True
 
-    created_at = models.DateTimeField(auto_now_add=True)
-    created_by = models.ForeignKey(
-        to="authentication.User",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        default=None,
-    )
+    created_at = models.DateTimeField(default=timezone.now)
 
 
-class UpdatableModel(BaseModel):
+class UpdatableModel(models.Model):
     class Meta:
         abstract = True
 
-    updated_by = models.DateTimeField(auto_now_add=True)
-    updated_at = models.ForeignKey(
-        to="authentication.User",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        default=None,
-    )
+    updated_at = models.DateTimeField(null=True, blank=True, default=None)
+
+    def save(
+        self,
+        force_insert: bool = ...,
+        force_update: bool = ...,
+        using: str | None = ...,
+        update_fields: Iterable[str] | None = ...,
+    ) -> None:
+        self.updated_at = timezone.now()
+        super().save(force_insert, force_update, using, update_fields)
 
 
-class DeletableModel(BaseModel):
+class DeletableModel(models.Model):
     class Meta:
         abstract = True
 
-    deleted_at = models.DateTimeField(auto_now_add=True)
-    deleted_by = models.ForeignKey(
-        to="authentication.User",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        default=None,
-    )
-    
+    deleted_at = models.DateTimeField(null=True, blank=True, default=None)
+
     def delete(self):
         self.deleted_at = timezone.now()
+        self.save()
 
 
-
-class OrderedModel(BaseModel):
+class OrderedModel(models.Model):
     class Meta:
         abstract = True
         ordering = ["order"]
 
     order = models.FloatField(default=0)
+
     def __gt__(self, other):
-       return self.order > other.order
+        return self.order > other.order
 
     def __lt__(self, other):
         return self.order < other.order
@@ -87,12 +68,11 @@ class OrderedModel(BaseModel):
         return self.order <= other.order
 
 
-
 class AuditableModel(CreatableModel, UpdatableModel, DeletableModel):
     class Meta:
         abstract = True
 
 
-class SuperModel(AuditableModel, OrderedModel):
+class SuperModel(AuditableModel, OrderedModel, UUIDModel):
     class Meta:
         abstract = True

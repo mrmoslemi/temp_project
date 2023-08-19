@@ -1,14 +1,16 @@
 from rest_framework.permissions import IsAuthenticated
 
 
-def access_permission(
-    module: str, entity: str = None, action: str = None, instance: str = None
-):
+def access_permission(path: str):
     class PermissionClass(IsAuthenticated):
         def has_permission(self, request, view):
-            return super(self, IsAuthenticated) and request.user.has_access(
-                module, entity, action, instance
-            )
+            from authorization.models import Grant, Action
+
+            if request.user.is_superuser:
+                return True
+            action = Action.get_with_path(path)
+            has_grant = Grant.objects.filter(action=action, group__user=request.user)
+            return super().has_permission(request, view) and has_grant
 
     return PermissionClass
 
@@ -18,7 +20,15 @@ def crud_access_permission(module: str, entity: str = None):
         def has_permission(self, request, view):
             if not request.user.is_authenticated:
                 return False
-            if view.action in ["create", "list", "paginated_list", "find"]:
+            if view.action in [
+                "list",
+                "paginate",
+                "create",
+                "find",
+                "retrieve",
+                "delete",
+                "update",
+            ]:
                 return request.user.has_access(
                     module=module, entity=entity, action=view.action
                 )
@@ -28,7 +38,6 @@ def crud_access_permission(module: str, entity: str = None):
                     module=module,
                     entity=entity,
                     action=view.action,
-                    instance=view.kwargs["pk"],
                 )
 
     return PermissionClass

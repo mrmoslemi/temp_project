@@ -13,6 +13,12 @@ def message(en: str, fa: str = None, type: str = MessageType.INFO):
     }
 
 
+mobile_error_message = message(
+    "Mobile number does not match 09xxxxxxxxx regex",
+    "شماره موبایل باید ۱۱ رقم و با شروع از ۰۹ باشد",
+    type=MessageType.WARNING,
+)
+
 default_not_found_message = message(
     en="Instance not found!",
     fa="مورد درخواستی یافت نشد!",

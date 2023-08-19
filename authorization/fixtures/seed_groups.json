@@ -1,0 +1,66 @@
+[
+  {
+    "model": "authorization.Group",
+    "pk": 1,
+    "fields": {
+      "title": "مدیر",
+      "order": 1
+    }
+  },
+  {
+    "model": "authorization.Group",
+    "pk": 2,
+    "fields": {
+      "title": "متولی",
+      "order": 2
+    }
+  },
+  {
+    "model": "authorization.Group",
+    "pk": 3,
+    "fields": {
+      "title": "سازمان بورس",
+      "order": 3
+    }
+  },
+  {
+    "model": "authorization.Group",
+    "pk": 4,
+    "fields": {
+      "title": "شعب",
+      "order": 4
+    }
+  },
+  {
+    "model": "authorization.Group",
+    "pk": 5,
+    "fields": {
+      "title": "حسابرس",
+      "order": 5
+    }
+  },
+  {
+    "model": "authorization.Group",
+    "pk": 6,
+    "fields": {
+      "title": "مشاهده سازمان",
+      "order": 6
+    }
+  },
+  {
+    "model": "authorization.Group",
+    "pk": 7,
+    "fields": {
+      "title": "پرداخت آنلاین",
+      "order": 7
+    }
+  },
+  {
+    "model": "authorization.Group",
+    "pk": 8,
+    "fields": {
+      "title": "کاربران ثبت",
+      "order": 8
+    }
+  }
+]

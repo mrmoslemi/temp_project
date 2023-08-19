@@ -53,25 +53,3 @@ class UsersTokenView(views.ModelViewSet):
                 )
         except KeyError:
             return requests.BadRequest()
-
-
-class GroupsView(
-    views.ModelViewSet,
-    views.RetrieveModelMixin,
-    views.CreateModelMixin,
-    views.ListModelMixin,
-    views.EditModelMixin,
-    views.DeleteModelMixin,
-):
-    model = models.Group
-    permission_classes = [crud_access_permission("Authentication", "Group")]
-    serializer_class = {
-        "retrieve": serializers.GroupRetrieveSerializer,
-        "list": serializers.GroupListSerializer,
-    }
-
-
-class ModulesView(views.ModelViewSet, views.ListModelMixin):
-    permission_classes = [access_permission("Authentication", "Access")]
-    model = models.Module
-    serializer_class = serializers.ModuleSerializer

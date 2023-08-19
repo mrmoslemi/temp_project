@@ -4,55 +4,46 @@ from utils import mixins
 
 class Group(mixins.SuperModel):
     title = models.CharField(max_length=50)
-    users = models.ManyToManyField(to="authentication.User", blank=True)
+    users = models.ManyToManyField(
+        to="authentication.User",
+        blank=True,
+        related_name="groups",
+        related_query_name="group",
+        through="GroupUser",
+    )
+
+    def user_count(self):
+        return self.users.count()
 
 
-class Module(mixins.BaseModel):
-    key = models.CharField(max_length=20)
-    title = models.CharField(max_length=50)
-
-
-class Entity(mixins.BaseModel):
-    key = models.CharField(max_length=20)
-    title = models.CharField(max_length=50)
-    module = models.ForeignKey(to="Module", on_delete=models.CASCADE)
-
-
-class Action(mixins.BaseModel):
-    LIST = "list"
-    PAGINATE = "paginate"
-    CREATE = "create"
-    RETRIEVE = "retrieve"
-    UPDATE = "update"
-    DELETE = "delete"
-
-    key = models.CharField(max_length=20)
-    title = models.CharField(max_length=50)
-    entity = models.ForeignKey(to="Entity", on_delete=models.CASCADE)
-
-    @staticmethod
-    def get_with_path(path: str):
-        (action, entity, module) = Action.parse_path(path)
-        try:
-            return Action.objects.get(
-                key=action, entity__key=entity, entity__module__key=module
-            )
-        except Action.MultipleObjectsReturned:
-            raise Exception(f"multiple actions returned for path {path}")
-        except Action.DoesNotExist:
-            return None
-
-    @staticmethod
-    def parse_path(path: str):
-        parts = path.split(".")
-        if len(parts) != 3:
-            raise ValueError
-        return (parts[0], parts[1], parts[2])
+class GroupUser(mixins.CreatableModel):
+    user = models.ForeignKey(
+        to="authentication.User",
+        on_delete=models.CASCADE,
+        related_name="group_users",
+        related_query_name="group_user",
+    )
+    group = models.ForeignKey(
+        to="Group",
+        on_delete=models.CASCADE,
+        related_name="group_users",
+        related_query_name="group_user",
+    )
 
 
 class Grant(mixins.CreatableModel):
-    action = models.ForeignKey(to="Action")
-    group = models.ForeignKey(to="Group", on_delete=models.CASCADE)
+    access = models.ForeignKey(
+        to="Action",
+        related_name="grants",
+        related_query_name="grant",
+        on_delete=models.CASCADE,
+    )
+    group = models.ForeignKey(
+        to="Group",
+        related_name="grants",
+        related_query_name="grant",
+        on_delete=models.CASCADE,
+    )
 
     def get_for_user(self):
         actions = models.Action.objects.filter(
@@ -69,5 +60,36 @@ class Grant(mixins.CreatableModel):
 
 
 class Log(mixins.CreatableModel):
-    user = models.ManyToManyField(to="authentication.User", blank=True)
-    action = models.ForeignKey(to="Action", on_delete=models.CASCADE)
+    user = models.ForeignKey(
+        to="authentication.User",
+        related_name="logs",
+        related_query_name="log",
+        on_delete=models.CASCADE,
+    )
+    action = models.ForeignKey(
+        to="Action",
+        related_name="logs",
+        related_query_name="log",
+        on_delete=models.CASCADE,
+    )
+    metadata = models.JSONField(null=True, blank=True, default=None)
+
+
+class Access(models.Model):
+    path = models.CharField(max_length=40)
+    title = models.CharField(max_length=30)
+    parent = models.ForeignKey(
+        to="Access",
+        related_name="children",
+        related_query_name="child",
+        null=True,
+        blank=True,
+        default=None,
+    )
+
+
+def has_access(user):
+    user_actions = Access.objects.filter(grant__group__user=user).select_related(
+        "parent", "parent__parent", "parent__parent__parent"
+    )
+    print(user_actions)

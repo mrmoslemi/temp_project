@@ -1,12 +1,14 @@
 from rest_framework import serializers
 from . import models
+from authentication import models as auth_models
+from utils import requests
 
 
 # access hire
 class ActionSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Action
-        fields = ["key", "title"]
+        fields = ["path", "title"]
 
 
 class EntitySerializer(serializers.ModelSerializer):
@@ -25,33 +27,40 @@ class ModuleSerializer(serializers.ModelSerializer):
     entities = EntitySerializer(many=True)
 
 
-class AccessTokenCreateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.AccessToken
-        fields = ["username", "password"]
-
-    def validate(self, attrs):
-        username = attrs.get("username")
-        password = attrs.get("password")
-        user = models.User.get_by_username(username)
-        if user:
-            correct_password = user.check_password(password)
-            return super().validate(attrs)
-
-
-class UserRetrieveSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.User
-        fields = ["id", "username", "email", "mobile"]
-
-
 class GroupListSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Group
-        fields = ["id", "title"]
+        fields = ["uuid", "title", "user_count"]
+
+
+class GroupCreateUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Group
+        fields = ["title"]
 
 
 class GroupRetrieveSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Group
-        fields = ["id", "title", "users"]
+        fields = ["uuid", "title", "users", "grants"]
+
+
+class GrantSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Grant
+        fields = ["action"]
+
+    action = ActionSerializer()
+
+
+class UserInfoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = auth_models.User
+        fields = [
+            "username",
+            "email",
+            "mobile",
+            "first_name",
+            "last_name",
+            "is_superuser",
+        ]

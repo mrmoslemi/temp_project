@@ -5,6 +5,9 @@ from rest_framework.viewsets import ViewSet
 
 from . import messages
 from utils.requests import Ok, BadRequest, NotFound, Created, Forbidden
+from django.db import models
+
+from drf_yasg.utils import swagger_auto_schema
 
 
 class ModelViewSet(ViewSet):
@@ -95,9 +98,17 @@ class ModelViewSet(ViewSet):
     def get_serializer_context(self):
         return {"request": self.request, "view": self}
 
-    def get_object(self):
+    def get_object(
+        self,
+        queryset: models.QuerySet = None,
+        keyword: str = "uuid",
+        lookup_field: str = "uuid",
+    ):
+        if not queryset:
+            queryset = self.get_queryset()
+
         try:
-            obj = self.get_queryset().get(id=self.kwargs["pk"])
+            obj = queryset.get(**{lookup_field: self.kwargs[keyword]})
             self.check_object_permissions(self.request, obj)
             return obj
         except ObjectDoesNotExist:
@@ -178,11 +189,11 @@ class ListModelMixin:
             return response
 
 
-class PaginatedListModelMixin:
+class PaginateModelMixin:
     page_size = 20
 
     @action(detail=True, methods=["GET"])
-    def paginated_list(self, *args, **kwargs):
+    def paginate(self, *args, **kwargs):
         try:
             self.queryset = self.get_queryset()
 

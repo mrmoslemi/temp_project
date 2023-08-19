@@ -3,56 +3,11 @@ from rest_framework.permissions import AllowAny
 from utils import views, requests
 from utils.permissions import access_permission, crud_access_permission
 from . import models
+from authentication import models as auth_models
 from . import serializers
+from . import messages
 
 # Create your views here.
-
-
-class RegisterView(views.ModelViewSet, views.CreateModelMixin):
-    pass
-
-
-class LoginView(views.ModelViewSet):
-    pass
-
-
-class UsersTokenView(views.ModelViewSet):
-    permission_classes = [AllowAny]
-    model = models.User
-    serializer_class = serializers.UserRetrieveSerializer
-
-    def retrieve_authenticated(self, *args, **kwargs):
-        pass
-
-    def retrieve_authorized(self, *args, **kwargs):
-        try:
-            token = self.request.data.get("token")
-            module = self.request.data.get("module")
-            entity = self.request.data.get("entity", None)
-            action = self.request.data.get("action", None)
-            instance = self.request.data.get("instance", None)
-            user = models.AccessToken.verify_token(token)
-            if not user:
-                return requests.UnAuthorized()
-            has_access = user.has_access(module, entity, action, instance)
-            if has_access:
-                models.AccessLog.objects.create(
-                    user=user,
-                    module=module,
-                    entity=entity,
-                    action=action,
-                    instance=instance,
-                )
-                return requests.Ok(
-                    {
-                        "has_access": True,
-                        "user": serializers.UserSerializer(
-                            user, context=self.get_serializer_context
-                        ),
-                    }
-                )
-        except KeyError:
-            return requests.BadRequest()
 
 
 class GroupsView(
@@ -72,6 +27,36 @@ class GroupsView(
 
 
 class ModulesView(views.ModelViewSet, views.ListModelMixin):
-    permission_classes = [access_permission("Authentication", "Access")]
+    permission_classes = [access_permission("Authorization.Module.list")]
     model = models.Module
     serializer_class = serializers.ModuleSerializer
+
+
+from rest_framework.views import APIView
+
+
+class AuthorizeView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, *args, **kwargs):
+        data: dict = self.request.data
+        path = data.get("path", None)
+        token = data.get("token", None)
+        metadata = data.get("metadata", None)
+
+        if not path or not token:
+            return requests.BadRequest(messages.authorization_bad_request_error)
+        action = models.Action.get_with_path(path)
+        if not action:
+            raise requests.BadRequest(messages.wrong_key_path_error)
+
+        user = auth_models.AccessToken.verify_token(token)
+        if not user:
+            return requests.UnAuthorized(messages.invalid_token_error)
+
+        has_access = action.has_access(user)
+        if not has_access:
+            raise requests.Forbidden(messages.wrong_key_path_error)
+        models.Log.objects.create(user=user, action=action, metadata=metadata)
+        user_info = serializers.UserInfoSerializer(user)
+        return requests.Ok(data={"has_access": True, "user_info": user_info.data})
